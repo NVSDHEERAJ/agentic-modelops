@@ -15,6 +15,10 @@ data/processed/*.csv
 # Model files
 models/current/*.pkl
 models/preprocessing/*.pkl
+*.pkl
+
+#logs
+data/logs
 
 # Reports
 reports/metrics/*.json

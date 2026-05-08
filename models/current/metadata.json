@@ -433,7 +433,7 @@
     "DeviceType",
     "DeviceInfo"
   ],
-  "threshold": null,
+  "threshold": 0.05,
   "metrics": {
     "roc_auc": 0.8167592918127856,
     "pr_auc": 0.27007636474901264,
