@@ -3,6 +3,14 @@ from fastapi import FastAPI, HTTPException
 from src.serving.schemas import PredictionRequest, PredictionResponse
 from src.serving.model_service import FraudModelService
 
+from src.logging.db import DatabaseManager
+from src.logging.prediction_logger import PredictionLogger
+
+db_manager = DatabaseManager()
+db_manager.initialize_database()
+
+prediction_logger = PredictionLogger(db_manager)
+
 app = FastAPI(
     title = "Fraud Dectection API",
     description = "FastAPI service for IEEE fraud detection model inference",
@@ -27,6 +35,16 @@ def health_check():
 def predict(request : PredictionRequest):
     try:
         result = model_service.predict(request.features)
+
+        prediction_logger.log_prediction(
+            features = request.features,
+            fraud_probability = result["fraud_probability"],
+            prediction = result["prediction"],
+            threshold = result["threshold"],
+            model_version = result["model_version"],
+            actual_label = request.actual_label
+        )
+
         return result
     except Exception as e:
         raise HTTPException(status_code = 500, detail = f"Prediction failed: {str(e)}")

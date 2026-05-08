@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = BASE_DIR / "data" / "processed"
 MODEL_DIR = BASE_DIR / "models" / "current"
 REPORT_DIR = BASE_DIR / "reports" / "metrics"
+DB_PATH = BASE_DIR / "data" / "logs" / "predictions.db"
 
 TRAIN_PATH = DATA_DIR / "train.csv"
 VALIDATION_PATH = DATA_DIR / "validation.csv"
