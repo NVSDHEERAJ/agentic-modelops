@@ -26,3 +26,5 @@ DROP_COLS = [
 ]
 
 RANDOM_STATE = 42
+
+API_URL = "http://localhost:8000/predict"
