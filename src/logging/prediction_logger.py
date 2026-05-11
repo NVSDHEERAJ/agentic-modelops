@@ -15,24 +15,27 @@ class PredictionLogger:
             prediction : int,
             threshold : float,
             model_version : str,
+            deployment_id: int |None = None,
             actual_label : int | None = None
     ) -> None:
         insert_query = """
         INSERT INTO prediction_logs (
             timestamp,
             model_version,
+            deployment_id,
             features_json,
             fraud_probability,
             prediction,
             decision_threshold,
             actual_label
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
             """
         
         values = (
             datetime.now(timezone.utc).isoformat(),
             model_version,
+            deployment_id,
             json.dumps(features),
             fraud_probability,
             prediction,

@@ -6,7 +6,9 @@ class PredictionRequest(BaseModel):
     actual_label: Optional[int] = None # Optional field for actual label, useful for monitoring and evaluation
 
 class PredictionResponse(BaseModel):
-    prediction : int
-    fraud_probability : float
-    threshold : float
-    model_version : str
+    prediction: int
+    fraud_probability: float
+    threshold: float
+    model_version: str
+    deployment_id: Optional[int] = None
+    deployed_at: Optional[str] = None

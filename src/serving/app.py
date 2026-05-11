@@ -29,6 +29,8 @@ def health_check():
         "status" : "healthy",
         "model_loaded" : model_service.model is not None,
         "model_version" : model_service.model_version,
+        "deployment_id" : model_service.deployment_id,
+        "deployed_at" : model_service.deployed_at
     }
 
 @app.post("/predict", response_model = PredictionResponse)
@@ -42,6 +44,7 @@ def predict(request : PredictionRequest):
             prediction = result["prediction"],
             threshold = result["threshold"],
             model_version = result["model_version"],
+            deployment_id = result["deployment_id"],
             actual_label = request.actual_label
         )
 

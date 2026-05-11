@@ -1,28 +1,70 @@
-# Python
+# Python caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
 .venv/
 venv/
+env/
+ENV/
+
+# Environment and secrets
 .env
+.env.*
+!.env.example
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Jupyter
+.ipynb_checkpoints/
 
-# Data files
-data/raw/
-data/processed/*.csv
+# Local databases and logs
+data/logs/
+*.db
+*.sqlite
+*.sqlite3
+*.log
 
-# Model files
-models/current/*.pkl
-models/preprocessing/*.pkl
+# Data artifacts
+data/raw/**
+data/processed/**
+data/candidates/**
+data/production_logs/**
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/candidates/.gitkeep
+!data/production_logs/.gitkeep
+
+# Model artifacts
+models/current/**
+models/candidates/**
+models/preprocessing/**
 *.pkl
+*.joblib
+!models/current/.gitkeep
+!models/candidates/.gitkeep
+!models/preprocessing/.gitkeep
 
-#logs
-data/logs
+# Reports and generated metrics
+reports/metrics/**
+reports/candidates/**
+!reports/metrics/.gitkeep
+!reports/candidates/.gitkeep
 
-# Reports
-reports/metrics/*.json
+# Build and packaging
+build/
+dist/
+*.egg-info/
 
-# OS
+# IDE/editor
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini

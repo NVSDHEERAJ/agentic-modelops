@@ -3,22 +3,41 @@ from pathlib import Path
 from typing import Any
 
 from src.config import settings
+from src.logging.db import DatabaseManager
 from src.monitoring.performance_monitor import PerformanceMonitor
 from src.monitoring.drift_detector import DriftDetector
 
 class MonitoringReportGenerator:
     def __init__(
-            self,
-            performance_monitor : PerformanceMonitor | None = None,
-            drift_detector : DriftDetector | None = None,
+        self,
+        performance_monitor: PerformanceMonitor | None = None,
+        drift_detector: DriftDetector | None = None,
+        db_manager: DatabaseManager | None = None,
     ) -> None:
+        self.db_manager = db_manager or DatabaseManager()
+
         self.performance_monitor: PerformanceMonitor = (
-            performance_monitor if performance_monitor is not None else PerformanceMonitor()
+            performance_monitor
+            if performance_monitor is not None
+            else PerformanceMonitor(db_manager=self.db_manager)
         )
 
         self.drift_detector: DriftDetector = (
-            drift_detector if drift_detector is not None else DriftDetector()
+            drift_detector
+            if drift_detector is not None
+            else DriftDetector(db_manager=self.db_manager)
         )
+
+    def load_baseline_metrics(self) -> dict[str, Any]:
+        active_deployment = self.db_manager.get_active_deployment()
+
+        if active_deployment is not None and active_deployment.get("metrics_path"):
+            metrics_path = Path(active_deployment["metrics_path"])
+        else:
+            metrics_path = Path(settings.BASELINE_METRICS_PATH)
+
+        with open(metrics_path, "r", encoding="utf-8") as file:
+            return json.load(file)
 
     def determine_status(
     self,
@@ -98,8 +117,7 @@ class MonitoringReportGenerator:
     def generate_report(self) -> dict[str, Any]:
         performance_metrics = self.performance_monitor.run()
         drift_report = self.drift_detector.run()
-        with open(settings.BASELINE_METRICS_PATH, "r", encoding = "utf-8") as f:
-            baseline_metrics = json.load(f)
+        baseline_metrics = self.load_baseline_metrics()
 
         baseline_status = self.determine_status(
             performance_metrics=performance_metrics,
@@ -111,7 +129,10 @@ class MonitoringReportGenerator:
             status = baseline_status
         )
 
+        active_deployment = self.db_manager.get_active_deployment()
+
         return {
+            "active_deployment" : active_deployment,
             "baseline_status": baseline_status,
             "baseline_recommendation": baseline_recommendation,
             "baseline_metrics" : baseline_metrics,
@@ -121,10 +142,22 @@ class MonitoringReportGenerator:
         }
 
     def save_report(self, report: dict[str, Any]) -> None:
-        Path(settings.UNIFIED_MONITORING_REPORT_PATH).parent.mkdir(
+        active_deployment = report.get("active_deployment")
+
+        if active_deployment is not None:
+            report_path = (
+                settings.REPORT_DIR
+                / active_deployment["model_version"]
+                / "unified_monitoring_report.json"
+            )
+        else:
+            report_path = settings.UNIFIED_MONITORING_REPORT_PATH
+
+        Path(report_path).parent.mkdir(
             parents=True,
             exist_ok=True,
         )
 
-        with open(settings.UNIFIED_MONITORING_REPORT_PATH, "w", encoding="utf-8") as file:
+        with open(report_path, "w", encoding="utf-8") as file:
             json.dump(report, file, indent=2)
+

@@ -6,6 +6,17 @@ DATA_DIR = BASE_DIR / "data" / "processed"
 MODEL_DIR = BASE_DIR / "models" / "current"
 REPORT_DIR = BASE_DIR / "reports" / "metrics"
 
+CURRENT_MODEL_DIR = MODEL_DIR
+CANDIDATE_MODEL_DIR = BASE_DIR / "models" / "candidates"
+
+CURRENT_REPORT_DIR = REPORT_DIR
+CANDIDATE_REPORT_DIR = BASE_DIR / "reports" / "candidates"
+
+PREPROCESSING_DIR = BASE_DIR / "models" / "preprocessing"
+DEFAULT_PREPROCESSING_PATH = PREPROCESSING_DIR / "label_encoders.pkl"
+
+DEFAULT_MODEL_VERSION = "baseline_v1"
+
 TRAIN_PATH = DATA_DIR / "train.csv"
 VALIDATION_PATH = DATA_DIR / "validation.csv"
 PROD_SIMULATION_PATH = DATA_DIR / "production_simulation.csv"

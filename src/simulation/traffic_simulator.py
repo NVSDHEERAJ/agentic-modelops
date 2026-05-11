@@ -32,11 +32,16 @@ class ProductionTrafficSimulator:
         response.raise_for_status()
         return response.json()
     
-    def run(self, max_rows : int | None = None) -> None:
+    def run(self, max_rows: int | None = None, start_row: int = 0) -> None:
         df = self.load_data()
 
-        if max_rows is not None:
-            df = df.head(max_rows)
+        if start_row < 0:
+            raise ValueError("start_row must be greater than or equal to 0")
+
+        if max_rows is None:
+            df = df.iloc[start_row:]
+        else:
+            df = df.iloc[start_row:start_row + max_rows]
 
         success_count = 0
         failure_count = 0
@@ -60,6 +65,7 @@ class ProductionTrafficSimulator:
 
             time.sleep(self.delay_seconds)
         
-        print(f"Simulation completed. Total rows: {len(df)}")
+        print(f"Simulation completed. Start row: {start_row}")
+        print(f"Simulation completed. Total rows sent: {len(df)}")
         print(f"Success: {success_count}")
         print(f"Failures: {failure_count}")

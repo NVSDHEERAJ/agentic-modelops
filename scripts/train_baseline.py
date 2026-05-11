@@ -21,9 +21,13 @@ def main():
     registry.save_model(model)
     registry.save_metadata(features = X_train.columns.tolist(), metrics = metrics)
     registry.save_metrics(metrics)
+    deployment_id = registry.register_as_active_deployment()
+
 
     print("Baseline model trained and saved with metrics:")
     print(metrics)
+    print(f"Registered active deployment_id: {deployment_id}")
+
 
 if __name__ == "__main__":
     main()

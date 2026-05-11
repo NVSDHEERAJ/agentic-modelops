@@ -7,17 +7,19 @@ import pandas as pd
 from scipy.stats import ks_2samp
 
 from src.config import settings
+from src.logging.db import DatabaseManager
 
 class DriftDetector:
     def __init__(
-            self,
-            reference_data_path = settings.VALIDATION_PATH,
-            db_path = settings.DB_PATH,
-            model_path = settings.MODEL_PATH,
-            metadata_path = settings.METADATA_PATH,
-            drop_columns = settings.DROP_COLS,
-            p_value_threshold = 0.05,
-            top_k_features : int = 30
+        self,
+        reference_data_path=settings.VALIDATION_PATH,
+        db_path=settings.DB_PATH,
+        model_path=settings.MODEL_PATH,
+        metadata_path=settings.METADATA_PATH,
+        drop_columns=settings.DROP_COLS,
+        p_value_threshold=0.05,
+        top_k_features: int = 30,
+        db_manager: DatabaseManager | None = None,
     ) -> None:
         self.reference_data_path = reference_data_path
         self.db_path = db_path
@@ -26,24 +28,37 @@ class DriftDetector:
         self.drop_columns = drop_columns
         self.p_value_threshold = p_value_threshold
         self.top_k_features = top_k_features
+        self.db_manager = db_manager or DatabaseManager(db_path=db_path)
 
     def load_reference_data(self) -> pd.DataFrame:
         return pd.read_csv(self.reference_data_path)
     
     def load_production_data(self) -> pd.DataFrame:
-        query = """
-        SELECT features_json
-        FROM prediction_logs;
-        """
+        active_deployment = self.db_manager.get_active_deployment()
+
+        if active_deployment is None:
+            query = """
+            SELECT features_json
+            FROM prediction_logs;
+            """
+            params = ()
+        else:
+            query = """
+            SELECT features_json
+            FROM prediction_logs
+            WHERE deployment_id = ?;
+            """
+            params = (active_deployment["id"],)
 
         with sqlite3.connect(self.db_path) as conn:
-            logs_df = pd.read_sql_query(query, conn)
+            logs_df = pd.read_sql_query(query, conn, params=params)
 
         if logs_df.empty:
             raise ValueError("No prediction logs found in the database for drift detection")
-        
+
         features = logs_df["features_json"].apply(json.loads)
         return pd.DataFrame(features.tolist())
+
     
     def load_model_features(self) -> list[str]:
         with open(self.metadata_path, "r", encoding = "utf-8") as f:
@@ -116,22 +131,40 @@ class DriftDetector:
         return drift_results
         
     def detect_prediction_drift(self) -> dict[str, Any]:
-        query = """
-        SELECT fraud_probability, prediction
-        FROM prediction_logs;
-        """
+        active_deployment = self.db_manager.get_active_deployment()
+
+        if active_deployment is None:
+            query = """
+            SELECT fraud_probability, prediction, model_version, deployment_id
+            FROM prediction_logs;
+            """
+            params = ()
+        else:
+            query = """
+            SELECT fraud_probability, prediction, model_version, deployment_id
+            FROM prediction_logs
+            WHERE deployment_id = ?;
+            """
+            params = (active_deployment["id"],)
 
         with sqlite3.connect(self.db_path) as conn:
-            logs_df = pd.read_sql_query(query, conn)
+            logs_df = pd.read_sql_query(query, conn, params=params)
 
         if logs_df.empty:
             raise ValueError("No prediction logs found in the database for drift detection")
-        
+
         return {
-            "average_fraud_probability" :float(logs_df["fraud_probability"].mean()),
-            "fraud_prediction_rate" : float(logs_df["prediction"].mean()),
-            "total_predictions" : int(len(logs_df))
+            "average_fraud_probability": float(logs_df["fraud_probability"].mean()),
+            "fraud_prediction_rate": float(logs_df["prediction"].mean()),
+            "total_predictions": int(len(logs_df)),
+            "model_version": str(logs_df["model_version"].iloc[-1]),
+            "deployment_id": (
+                int(logs_df["deployment_id"].iloc[-1])
+                if pd.notna(logs_df["deployment_id"].iloc[-1])
+                else None
+            ),
         }
+
     
     def run(self) -> dict[str, Any]:
         reference_df = self.load_reference_data()
