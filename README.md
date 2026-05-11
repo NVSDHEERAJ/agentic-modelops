@@ -2,7 +2,11 @@
 
 ![No Country for Old Models](assets/no-country-for-old-models.png)
 
-An end-to-end agentic ModelOps system for a credit card fraud detection model. The project is designed to train a baseline model, serve it through an API, monitor production behavior, diagnose drift and degradation, retrain candidate models, evaluate them against the current champion, and eventually govern deployment promotion.
+An agentic ModelOps system that turns a deployed ML model into a self-monitoring, self-improving system.
+
+Instead of static pipelines and scheduled retraining, this project uses multiple agents to observe production behavior, reason about drift and performance degradation, decide when retraining is justified, and safely govern model deployment.
+
+While a credit card fraud detection model is used as a working example, the real focus is the architecture: FastAPI-based serving combined with a LangGraph-powered multi-agent system that manages the full ML lifecycle autonomously.
 
 The guiding idea is simple: production data changes, so the system should observe, reason, and adapt.
 
