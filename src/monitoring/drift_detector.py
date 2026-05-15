@@ -8,6 +8,7 @@ from scipy.stats import ks_2samp
 
 from src.config import settings
 from src.logging.db import DatabaseManager
+from src.serving.model_service import FraudModelService
 
 class DriftDetector:
     def __init__(
@@ -57,9 +58,20 @@ class DriftDetector:
             raise ValueError("No prediction logs found in the database for drift detection")
 
         features = logs_df["features_json"].apply(json.loads)
-        return pd.DataFrame(features.tolist())
+        raw_production_df = pd.DataFrame(features.tolist())
 
-    
+        model_service = FraudModelService(db_manager=self.db_manager)
+
+        processed_rows = []
+        for _, row in raw_production_df.iterrows():
+            raw_features = {
+                str(key) : None if pd.isna(value) else value
+                for key, value in row.to_dict().items()
+            }
+            processed_rows.append(model_service.prepare_input(raw_features))
+
+        return pd.concat(processed_rows, ignore_index=True)
+
     def load_model_features(self) -> list[str]:
         with open(self.metadata_path, "r", encoding = "utf-8") as f:
             metadata = json.load(f)

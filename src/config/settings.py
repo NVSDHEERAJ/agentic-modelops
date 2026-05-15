@@ -21,6 +21,10 @@ TRAIN_PATH = DATA_DIR / "train.csv"
 VALIDATION_PATH = DATA_DIR / "validation.csv"
 PROD_SIMULATION_PATH = DATA_DIR / "production_simulation.csv"
 
+RAW_TRAIN_PATH = BASE_DIR / "data" / "raw" / "baseline_v1" / "training_data" / "train.csv"
+RAW_VAL_PATH = BASE_DIR / "data" / "raw" / "baseline_v1" / "training_data" / "validation.csv"
+RAW_PROD_SIMULATION_PATH = BASE_DIR / "data" / "prod_data" / "prod_simulation.csv"
+
 MODEL_PATH = MODEL_DIR / "model.pkl"
 METADATA_PATH = MODEL_DIR / "metadata.json"
 BASELINE_METRICS_PATH = REPORT_DIR / "baseline_metrics.json"

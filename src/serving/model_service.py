@@ -83,7 +83,17 @@ class FraudModelService:
             encoded_values = encoder.transform(row[col].astype(str))
             row[col] = pd.Series(encoded_values, index=row.index)
 
-        row = row.fillna(-999)
+        numeric_cols = [
+            col
+            for col in self.features
+            if col not in self.encoders
+        ]
+
+        for col in numeric_cols:
+            row[col] = pd.to_numeric(row[col], errors="coerce")
+
+        row[numeric_cols] = row[numeric_cols].fillna(-999)
+
         row = row[self.features]
 
         return row
@@ -103,3 +113,6 @@ class FraudModelService:
             "deployment_id": self.deployment_id,
             "deployed_at": self.deployed_at,
         }
+    
+    def reload_model(self) -> None:
+        self.load_model()

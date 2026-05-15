@@ -51,3 +51,16 @@ def predict(request : PredictionRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code = 500, detail = f"Prediction failed: {str(e)}")
+    
+@app.post("/reload-model")
+def reload_model():
+    try:
+        model_service.reload_model()
+        return {
+            "status": "reloaded",
+            "model_version": model_service.model_version,
+            "deployment_id": model_service.deployment_id,
+            "deployed_at": model_service.deployed_at,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model reload failed: {str(e)}")

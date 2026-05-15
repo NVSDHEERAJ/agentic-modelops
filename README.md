@@ -2,255 +2,75 @@
 
 ![No Country for Old Models](assets/no-country-for-old-models.png)
 
-An agentic ModelOps system that turns a deployed ML model into a self-monitoring, self-improving system.
-
-Instead of static pipelines and scheduled retraining, this project uses multiple agents to observe production behavior, reason about drift and performance degradation, decide when retraining is justified, and safely govern model deployment.
-
-While a credit card fraud detection model is used as a working example, the real focus is the architecture: FastAPI-based serving combined with a LangGraph-powered multi-agent system that manages the full ML lifecycle autonomously.
+An end-to-end agentic ModelOps system for a credit card fraud detection model. The project is designed to train a baseline model, serve it through an API, monitor production behavior, diagnose drift and degradation, retrain candidate models, evaluate them against the current champion, and eventually govern deployment promotion.
 
 The guiding idea is simple: production data changes, so the system should observe, reason, and adapt.
 
-## Vision
+## What It Does
 
-This project is being built as a practical ModelOps loop:
+- Trains and registers a baseline LightGBM fraud model.
+- Serves predictions through FastAPI using the active deployment from SQLite.
+- Logs raw production requests, predictions, labels, model version, and deployment id.
+- Generates deployment-scoped performance, drift, and unified monitoring reports.
+- Runs a LangGraph-style agent workflow for monitoring, diagnosis, retraining, and governance.
+- Retrains candidate models using baseline raw data plus labeled production logs.
+- Fits candidate preprocessing artifacts on candidate train data only.
+- Evaluates candidates against the active champion model.
+- Enforces deterministic promotion gates and requires human approval before deployment.
+- Supports active deployment switching through a versioned deployment registry.
 
-```text
-Train baseline
-    -> deploy active model
-    -> serve predictions
-    -> log production traffic
-    -> monitor performance and drift
-    -> agent decides next action
-    -> diagnose issue
-    -> retrain candidate
-    -> evaluate candidate
-    -> governance decision
-    -> promote or reject
-    -> continue monitoring
-```
-
-The final goal is not just a model training script. It is a small, inspectable fraud-model operations platform where agents can use tools, reports, and deployment metadata to make structured operational decisions.
-
-## Planned System Architecture
+## ModelOps Flow
 
 ```text
-                         +----------------------------+
-                         | Raw Data / Production Feed |
-                         +-------------+--------------+
-                                       |
-                                       v
-                         +----------------------------+
-                         | FastAPI Inference Service  |
-                         | src/serving/app.py         |
-                         +-------------+--------------+
-                                       |
-                                       v
-                         +----------------------------+
-                         | Active Model Deployment    |
-                         | model + metadata + encoder |
-                         +-------------+--------------+
-                                       |
-                                       v
-                         +----------------------------+
-                         | SQLite ModelOps Store      |
-                         | deployments + predictions  |
-                         +-------------+--------------+
-                                       |
-             +-------------------------+--------------------------+
-             |                                                    |
-             v                                                    v
-  +------------------------+                         +------------------------+
-  | Performance Monitor    |                         | Drift Detector         |
-  | precision/recall/F1    |                         | feature/pred drift     |
-  +------------+-----------+                         +------------+-----------+
-               |                                                  |
-               +--------------------------+-----------------------+
-                                          v
-                             +--------------------------+
-                             | Unified Monitoring Report|
-                             +------------+-------------+
-                                          |
-                                          v
-                             +--------------------------+
-                             | Agentic Decision Layer   |
-                             +------------+-------------+
-                                          |
-          +-------------------------------+-------------------------------+
-          |                               |                               |
-          v                               v                               v
-  +----------------+              +----------------+              +----------------+
-  | Watch/Continue |              | Diagnose/Retrain|             | Escalate/Human |
-  +----------------+              +-------+--------+              +----------------+
-                                          |
-                                          v
-                             +--------------------------+
-                             | Candidate Retraining     |
-                             | data + preprocessing     |
-                             +------------+-------------+
-                                          |
-                                          v
-                             +--------------------------+
-                             | Candidate Evaluation     |
-                             +------------+-------------+
-                                          |
-                                          v
-                             +--------------------------+
-                             | Deployment Governance    |
-                             | promote / reject         |
-                             +--------------------------+
+Production traffic
+    -> FastAPI prediction service
+    -> SQLite prediction logs
+    -> monitoring + drift reports
+    -> monitoring agent decision
+    -> diagnostic retraining agent
+    -> candidate training + evaluation
+    -> deployment governance agent
+    -> human-gated promotion or rejection
 ```
 
-## Current Status
-
-Implemented:
-
-- Baseline LightGBM fraud model training.
-- FastAPI prediction service.
-- SQLite prediction logging.
-- Active deployment registry with `model_deployments`.
-- Version-aware prediction logs with `deployment_id`.
-- Production traffic simulation.
-- Deployment-scoped performance monitoring.
-- Deployment-scoped drift detection.
-- Version-scoped monitoring reports.
-- Monitoring agent tools.
-- Diagnostic/retraining tool scaffolding.
-- Initial retraining module structure under `src/retraining/`.
-
-In progress:
-
-- Raw-data-first preprocessing pipeline.
-- Candidate retraining using raw baseline data plus labeled production logs.
-- Candidate-owned preprocessing artifacts.
-- Candidate evaluation and promotion criteria.
-- Diagnostic retraining agent decision loop.
-
-Planned:
-
-- Deployment governance agent.
-- Human approval gates.
-- Candidate promotion into active deployment.
-- Better model registry lifecycle states.
-- Raw production log export.
-- Stronger validation around data quality, schema drift, and leakage prevention.
-
-## Repository Layout
+## System Architecture
 
 ```text
-src/
-  agents/
-    graph.py
-    prompts.py
-    schemas.py
-    state.py
-    nodes/
-      monitoring_agent.py
-      monitoring_decision.py
-      diagnostic_retraining_agent.py
-      diagnostic_retraining_decision.py
-      deployment_governance_agent.py
-    tools/
-      monitoring_tools.py
-      diagnostic_retraining_tools.py
-
-  config/
-    settings.py
-
-  logging/
-    db.py
-    prediction_logger.py
-
-  monitoring/
-    performance_monitor.py
-    drift_detector.py
-    monitoring_report.py
-
-  retraining/
-    data_builder.py
-    preprocessor.py
-    candidate_pipeline.py
-
-  serving/
-    app.py
-    model_service.py
-    schemas.py
-
-  simulation/
-    traffic_simulator.py
-
-  training/
-    dataset.py
-    evaluator.py
-    model_registry.py
-    model_trainer.py
-
-scripts/
-  train_baseline.py
-  simulate_production_traffic.py
-  check_logs.py
-  run_monitoring.py
-  run_drift_detection.py
-  generate_monitoring_report.py
-  run_agent_graph.py
+                  +--------------------------+
+                  | Production Simulator     |
+                  +------------+-------------+
+                               |
+                               v
+                  +--------------------------+
+                  | FastAPI Inference API    |
+                  | active deployment loader |
+                  +------------+-------------+
+                               |
+                               v
+                  +--------------------------+
+                  | SQLite ModelOps Store    |
+                  | deployments + logs       |
+                  +------------+-------------+
+                               |
+           +-------------------+-------------------+
+           |                                       |
+           v                                       v
+ +----------------------+              +----------------------+
+ | Performance Monitor  |              | Drift Detector       |
+ +----------+-----------+              +----------+-----------+
+            |                                     |
+            +------------------+------------------+
+                               v
+                  +--------------------------+
+                  | Agentic Decision Graph   |
+                  | monitor -> diagnose      |
+                  | -> retrain -> govern     |
+                  +--------------------------+
 ```
 
-## Data and Artifact Design
+## Key Design
 
-The intended final layout separates raw data, processed data, model artifacts, and reports by version.
-
-```text
-data/
-  raw/
-    baseline_v1/
-      train.csv
-      validation.csv
-      production_simulation.csv
-
-  processed/
-    baseline_v1/
-      train.csv
-      validation.csv
-
-  candidates/
-    candidate_<timestamp>/
-      raw_combined.csv
-      train.csv
-      validation.csv
-
-models/
-  current/
-    baseline_v1/
-      model.pkl
-      metadata.json
-      label_encoders.pkl
-      preprocessing_metadata.json
-
-  candidates/
-    candidate_<timestamp>/
-      model.pkl
-      metadata.json
-      label_encoders.pkl
-      preprocessing_metadata.json
-
-reports/
-  metrics/
-    baseline_v1/
-      metrics.json
-      monitoring_report.json
-      drift_report.json
-      unified_monitoring_report.json
-
-  candidates/
-    candidate_<timestamp>/
-      metrics.json
-      candidate_summary.json
-```
-
-The current project is moving toward this structure. Some older files may still exist at legacy paths while the refactor is in progress.
-
-## Model Deployment Versioning
-
-Deployments are tracked in SQLite:
+The system keeps deployment history and production logs in SQLite.
 
 ```text
 model_deployments
@@ -265,11 +85,7 @@ model_deployments
 - training_data_cutoff_timestamp
 - is_active
 - status
-```
 
-Prediction logs are linked to deployments:
-
-```text
 prediction_logs
 - id
 - timestamp
@@ -282,15 +98,63 @@ prediction_logs
 - actual_label
 ```
 
-This lets the system preserve historical logs while monitoring only the active deployment:
+Monitoring and drift detection filter by active `deployment_id`, so historical traffic remains available without contaminating current model reports.
 
-```sql
-WHERE deployment_id = ?
+## Repository Layout
+
+```text
+src/
+  agents/        # Agent nodes, tools, prompts, graph state
+  config/        # Project paths and settings
+  logging/       # SQLite schema and prediction logging
+  monitoring/    # Performance, drift, unified reports
+  retraining/    # Candidate data builder, preprocessing, training/evaluation
+  serving/       # FastAPI app and model service
+  simulation/    # Production traffic simulator
+  training/      # Baseline training, evaluation, registry
+
+scripts/
+  train_baseline.py
+  simulate_production_traffic.py
+  run_monitoring.py
+  run_drift_detection.py
+  generate_monitoring_report.py
+  run_agent_graph.py
+  run_full_modelops_loop.py
+  approve_latest_candidate.py
 ```
 
-## Baseline Workflow
+## Artifacts
 
-Train and register the baseline deployment:
+Baseline and candidate artifacts are versioned.
+
+```text
+models/current/baseline_v1/
+  model.pkl
+  metadata.json
+
+models/candidates/<candidate_version>/
+  model.pkl
+  metadata.json
+  label_encoders.pkl
+  preprocessing_metadata.json
+
+reports/metrics/<model_version>/
+  metrics.json
+  monitoring_report.json
+  drift_report.json
+  unified_monitoring_report.json
+
+reports/candidates/<candidate_version>/
+  metrics.json
+  candidate_summary.json
+```
+
+Raw production requests are logged to SQLite and used for retraining once labels are available.
+
+## Running The Project
+
+Train and register the baseline:
 
 ```bash
 python scripts/train_baseline.py
@@ -302,147 +166,71 @@ Start the API:
 uvicorn src.serving.app:app --reload
 ```
 
-Check the active model:
+Run the full local ModelOps loop:
 
 ```bash
-curl http://localhost:8000/health
+python -m scripts.run_full_modelops_loop
 ```
 
-Simulate production traffic:
+The full loop simulates traffic, generates monitoring reports, runs the agent graph, retrains/evaluates a candidate when justified, and checks whether the latest candidate is eligible for human-approved promotion.
+
+Manual approval can be run separately:
+
+```bash
+python scripts/approve_latest_candidate.py
+```
+
+Useful individual commands:
 
 ```bash
 python scripts/simulate_production_traffic.py
-```
-
-Inspect deployments and logs:
-
-```bash
-python scripts/check_logs.py
-```
-
-Generate monitoring reports:
-
-```bash
 python scripts/run_monitoring.py
 python scripts/run_drift_detection.py
 python scripts/generate_monitoring_report.py
+python scripts/run_agent_graph.py
+python scripts/check_logs.py
 ```
 
-Run the agent graph:
+## Governance Behavior
 
-```bash
-python scripts/run_agent_graph.py
+The deployment governance layer uses deterministic gates before any promotion can happen.
+
+Current promotion criteria:
+
+```text
+F1 delta     >=  0.00
+Recall delta >= -0.02
+PR-AUC delta >= -0.01
+```
+
+If a candidate passes the gates, the system requests human approval. If it fails, promotion is blocked even if other metrics improve. This is intentional for fraud detection, where recall regression can mean missed fraud.
+
+Example outcome:
+
+```text
+Candidate improved F1, precision, PR-AUC, and ROC-AUC,
+but recall dropped beyond the allowed threshold.
+Governance blocked promotion.
 ```
 
 ## Agent Roles
 
-### Monitoring Agent
+**Monitoring Agent**  
+Inspects traffic, performance, drift, and retraining metadata. Produces a structured decision: healthy, watch, diagnose, or escalate.
 
-Responsible for deciding whether the active production model is:
+**Diagnostic Retraining Agent**  
+Investigates drift/data quality, triggers candidate retraining when justified, evaluates the latest candidate, and decides whether the candidate is ready for governance.
 
-- healthy
-- watch
-- diagnose
-- escalate
+**Deployment Governance Agent**  
+Validates promotion gates, packages human approval requests, and blocks unsafe promotion. Actual promotion requires explicit approval.
 
-It uses monitoring reports, traffic stats, drift reports, and retraining metadata.
+## Notes
 
-### Diagnostic Retraining Agent
-
-Responsible for investigating whether degradation is caused by:
-
-- feature drift
-- prediction drift
-- data quality issues
-- schema mismatch
-- stale model behavior
-
-It will trigger candidate retraining when evidence supports it.
-
-### Deployment Governance Agent
-
-Planned role responsible for promotion decisions:
-
-- compare candidate and champion metrics
-- enforce approval gates
-- check minimum recall/precision/F1 requirements
-- prevent unsafe automatic promotion
-- register promoted candidates as active deployments
-
-## Retraining Design
-
-The intended retraining flow is raw-data-first:
-
-1. Load baseline raw train and validation data.
-2. Load labeled production logs for the active deployment.
-3. Combine them into a candidate raw dataset.
-4. Split into candidate train and validation.
-5. Fit preprocessing on candidate train only.
-6. Transform candidate train and validation.
-7. Save candidate processed data.
-8. Save candidate preprocessing artifacts.
-9. Train candidate model.
-10. Evaluate candidate model.
-11. Compare candidate against active deployment.
-12. Promote only if governance rules pass.
-
-Important rules:
-
-- Production simulation should send raw features to the API.
-- The API should log raw request features.
-- `prepare_input()` should transform raw features for inference.
-- Validation data must never be used to fit preprocessing.
-- Candidate models must own their preprocessing artifacts.
-- Monitoring after promotion should only use logs from the new active deployment.
-
-## Monitoring Reports
-
-Reports are intended to be version-scoped:
-
-```text
-reports/metrics/<model_version>/
-  monitoring_report.json
-  drift_report.json
-  unified_monitoring_report.json
-```
-
-The unified report combines:
-
-- active deployment metadata
-- baseline/current model metrics
-- production performance metrics
-- drift metrics
-- recommendation
-- agent decision placeholder
-
-## Development Commands
-
-Useful commands:
-
-```bash
-python -m compileall src scripts
-python scripts/train_baseline.py
-python scripts/check_logs.py
-uvicorn src.serving.app:app --reload
-python scripts/simulate_production_traffic.py
-python scripts/run_monitoring.py
-python scripts/run_drift_detection.py
-python scripts/generate_monitoring_report.py
-python scripts/run_agent_graph.py
-```
-
-## Roadmap
-
-- Rebuild notebook preprocessing so production simulation remains raw.
-- Save raw baseline splits under `data/raw/baseline_v1/`.
-- Save processed baseline splits under `data/processed/baseline_v1/`.
-- Move reusable preprocessing logic out of the notebook.
-- Complete `src/retraining/preprocessor.py`.
-- Complete `src/retraining/candidate_pipeline.py`.
-- Slim down `diagnostic_retraining_tools.py` so it calls retraining services.
-- Implement candidate promotion.
-- Implement deployment governance node and tools.
-- Add tests for DB migrations, model loading, logging, monitoring filters, and candidate retraining.
+- Production simulation sends raw feature values to the API.
+- The API logs raw request features and applies preprocessing inside the model service.
+- Candidate preprocessing is fit on candidate train data only, then applied to validation.
+- Candidate models own their preprocessing artifacts.
+- FastAPI loads the active model from the deployment registry at startup or reload.
 
 ## Project Motto
 

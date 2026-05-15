@@ -32,12 +32,14 @@ data/logs/
 # Data artifacts
 data/raw/**
 data/processed/**
+data/prod_data/**
 data/candidates/**
 data/production_logs/**
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/candidates/.gitkeep
 !data/production_logs/.gitkeep
+*.csv
 
 # Model artifacts
 models/current/**

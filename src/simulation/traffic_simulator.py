@@ -1,5 +1,6 @@
 import time
 from typing import Any
+import math
 
 import pandas as pd
 import requests
@@ -9,7 +10,7 @@ from src.config import settings
 class ProductionTrafficSimulator:
     def __init__(
             self,
-            data_path = settings.PROD_SIMULATION_PATH,
+            data_path = settings.RAW_PROD_SIMULATION_PATH,
             api_url : str = settings.API_URL,
             target_col : str = settings.TARGET_COL,
             delay_seconds : float = 0.1
@@ -24,8 +25,18 @@ class ProductionTrafficSimulator:
     
     def build_payload(self, row: pd.Series) -> dict[str, Any]:
         actual_label = row[self.target_col]
-        features = row.drop(labels = settings.DROP_COLS).to_dict()
-        return {"features" : features, "actual_label": int(actual_label)}
+        raw_features = row.drop(labels=settings.DROP_COLS).to_dict()
+
+        features = {
+            key: None if isinstance(value, float) and math.isnan(value) else value
+            for key, value in raw_features.items()
+        }
+
+        return {
+            "features": features,
+            "actual_label": int(actual_label),
+        }
+
     
     def send_request(self, payload: dict[str, Any]) -> dict[str, Any]:
         response = requests.post(self.api_url, json = payload, timeout = 10)
